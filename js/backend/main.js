@@ -154,6 +154,45 @@ var service = new DarkWalletService(serviceClasses);
 
 
 /***************************************
+/* External OpenBazaar API
+ */
+chrome.runtime.onMessageExternal.addListener(
+    function(request, sender, sendResponse) {
+        var obPocket = "OBPocket";
+        switch(request.method) {
+        case "createOBPocket":
+            var exists = false;
+            service.getCurrentIdentity().wallet.pockets.hdPockets.map(function(wallet) {
+                if(wallet.name===obPocket) {
+                    exists = true;
+                }
+            });
+            if(exists) {
+                sendResponse({status:"success", data:{created:false}})
+            } else {
+                service.getCurrentIdentity().wallet.pockets.createPocket(obPocket)
+                sendResponse({status:"success", data:{created:true}})
+            }
+            break;
+        case "newPubKey":
+            
+            break;
+        case "createMultisig":
+            
+            break;
+        case "mktx":
+            
+            break;
+        case "mkMultisigTx":
+            
+            break;
+        default:
+            sendResponse({status:"fail",data:null});
+            break;
+        }
+    });
+
+/***************************************
 /* Bindings for the page window so we can have easy access
  */
 
