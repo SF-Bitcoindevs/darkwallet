@@ -159,29 +159,65 @@ var service = new DarkWalletService(serviceClasses);
 chrome.runtime.onMessageExternal.addListener(
     function(request, sender, sendResponse) {
         var obPocket = "OBPocket";
+        function getOBPocket() {    
+            var pock = null;
+            for(var i=0; i< service.getCurrentIdentity().wallet.pockets.pockets.hd.length; i++) {
+                if(service.getCurrentIdentity().wallet.pockets.pockets.hd[i].name===obPocket) {
+                    pock = service.getCurrentIdentity().wallet.pockets.pockets.hd[i];
+                    break;
+                }
+            }
+            return pock
+        }
+        function getOBIndex() {
+            pock = getOBPocket();
+            if(!pock) return null;
+            return pock.getIndex(pock.getMainAddress());
+        }
+        var hexChar = ["0", "1", "2", "3", "4", "5", "6", "7","8", "9", "A", "B", "C", "D", "E", "F"] 
+        function byteToHex(b) {
+            return hexChar[(b >> 4) & 0x0f] + hexChar[b & 0x0f];
+        }
         switch(request.method) {
         case "createOBPocket":
-            var exists = false;
-            service.getCurrentIdentity().wallet.pockets.hdPockets.map(function(wallet) {
-                if(wallet.name===obPocket) {
-                    exists = true;
-                }
-            });
-            if(exists) {
-                sendResponse({status:"success", data:{created:false}})
+            p = getOBPocket();
+            if(p) {
+                sendResponse({status:"success", data:{created:false}});
             } else {
-                service.getCurrentIdentity().wallet.pockets.createPocket(obPocket)
-                sendResponse({status:"success", data:{created:true}})
+                service.getCurrentIdentity().wallet.pockets.createPocket(obPocket);
+                i = getOBIndex();
+                service.getCurrentIdentity().wallet.getAddress([i*2,0]);
+                sendResponse({status:"success", data:{created:true}});
             }
             break;
         case "newPubKey":
-            
+            p = getOBPocket();
+            i = getOBIndex();
+            if(!p) {
+                sendResponse({status:"fail",data:null});
+            } else {
+                a = service.getCurrentIdentity().wallet.getAddress([i*2,p.addresses.length]);
+                pub = "";
+                a.map(function(e) {pub += byteToHex(e); });
+                sendResponse({status:"success",data:{address:a.address,publicKey:pub}});
+            }
             break;
         case "createMultisig":
             
             break;
         case "mktx":
-            
+            p = getOBPocket()
+            i = getOBIndex()
+            if(!request.value || !p) {
+                sendResponse({status:"fail",data:null});
+            } else {
+                try {
+                    o = service.getCurrentIdentity().wallet.getUtxoToPay(request.value,i,"hd");
+                    //TODO mktx with unspent outputs
+                } catch(err) {
+                    sendResponse({status:"fail",data:null});
+                }
+            }
             break;
         case "mkMultisigTx":
             
